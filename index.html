@@ -656,4 +656,197 @@ window.addEventListener('DOMContentLoaded',function(){
  };
 })();
 </script>
+
+<style id="role-v20-css">
+.role-v20{max-width:1180px;margin:18px auto 40px;padding:0 18px}
+.role-v20 .panel{background:#fff;border:1px solid #e5e8ef;border-radius:18px;padding:20px;box-shadow:0 10px 28px rgba(30,41,80,.06)}
+.role-v20-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:16px}
+.role-v20-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.role-v20-card{padding:16px;border-radius:15px;background:#f7f8ff;border:1px solid #e6e9f4}
+.role-v20-card h3{margin:0 0 7px}
+.role-v20-badge{display:inline-block;padding:5px 9px;border-radius:20px;font-size:11px;font-weight:900;background:#eef1ff;color:#485bd7}
+.role-v20-badge.teacher{background:#e8fbf5;color:#14815d}
+.role-v20-badge.admin{background:#fff0e5;color:#b25c12}
+.role-v20-btn{border:0;border-radius:10px;padding:10px 13px;font-weight:850;cursor:pointer;background:#596cff;color:#fff;margin:4px 4px 0 0}
+.role-v20-btn.secondary{background:#eef1ff;color:#4658cf}
+.role-v20-btn.danger{background:#fff0f0;color:#c63c3c}
+.role-v20-input,.role-v20-select,.role-v20-text{width:100%;box-sizing:border-box;padding:10px;border:1px solid #dfe3ed;border-radius:10px;margin:5px 0 10px}
+.role-v20-text{min-height:90px;resize:vertical}
+.role-v20-table{width:100%;border-collapse:collapse;font-size:13px}
+.role-v20-table th,.role-v20-table td{padding:10px;border-bottom:1px solid #edf0f5;text-align:left}
+.role-v20-note{padding:12px;border-radius:11px;background:#fff7df;color:#765900;font-size:12px;line-height:1.5}
+.role-v20-hidden{display:none!important}
+.role-v20-top{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.role-v20-title{margin:0}
+@media(max-width:850px){.role-v20-grid,.role-v20-cards{grid-template-columns:1fr}}
+</style>
+
+<div id="roleV20Panel" class="role-v20 role-v20-hidden">
+  <div class="role-v20-top">
+    <div>
+      <h2 class="role-v20-title">🔐 Эрхийн удирдлага</h2>
+      <div id="roleV20UserLine" class="muted"></div>
+    </div>
+    <button class="role-v20-btn secondary" onclick="roleV20Close()">← Сургалт руу буцах</button>
+  </div>
+  <div id="roleV20Body" style="margin-top:16px"></div>
+</div>
+
+<div id="roleV20LoginHelp" class="modal" style="display:none">
+  <div class="modalbox">
+    <h2>🔑 Demo эрхүүд</h2>
+    <p class="muted">Энэ v2.0 нь зөвхөн frontend demo. Бодит нууц үг/эрх хамгаалалт биш.</p>
+    <table class="role-v20-table">
+      <tr><th>Эрх</th><th>И-мэйл</th><th>Нууц үг</th></tr>
+      <tr><td><span class="role-v20-badge">Суралцагч</span></td><td>student@vetepi.mn</td><td>student123</td></tr>
+      <tr><td><span class="role-v20-badge teacher">Багш</span></td><td>teacher@vetepi.mn</td><td>teacher123</td></tr>
+      <tr><td><span class="role-v20-badge admin">Админ</span></td><td>admin@vetepi.mn</td><td>admin123</td></tr>
+    </table>
+    <button class="role-v20-btn" onclick="document.getElementById('roleV20LoginHelp').style.display='none';openAuth('login')">Нэвтрэх</button>
+    <button class="role-v20-btn secondary" onclick="document.getElementById('roleV20LoginHelp').style.display='none'">Хаах</button>
+  </div>
+</div>
+
+<script id="role-v20-js">
+(function(){
+  const KEY='vetEpiV20Users';
+  const COURSES='vetEpiV20Courses';
+  const seedUsers=[
+    {name:'Суралцагч Demo',email:'student@vetepi.mn',password:'student123',role:'student'},
+    {name:'Багш Demo',email:'teacher@vetepi.mn',password:'teacher123',role:'teacher'},
+    {name:'Админ Demo',email:'admin@vetepi.mn',password:'admin123',role:'admin'}
+  ];
+  const seedCourses=[
+    {id:'c1',title:'Тархвар зүйн үндэс',level:'Анхан',published:true,owner:'system',modules:[
+      {title:'1-р модуль. Суурь ойлголт',lessons:['Тархвар зүй гэж юу вэ?','Өвчлөлийн үндсэн үзүүлэлт','Тохиолдлын тодорхойлолт']},
+      {title:'2-р модуль. Тархалтын хэлбэр',lessons:['Цаг хугацаа','Орон зай','Хүн амын бүлэг']}
+    ]},
+    {id:'c2',title:'Мал эмнэлгийн тандалт',level:'Анхан',published:true,owner:'system',modules:[
+      {title:'1-р модуль. Тандалтын үндэс',lessons:['Идэвхтэй тандалт','Идэвхгүй тандалт','Эрсдэлд суурилсан тандалт']}
+    ]},
+    {id:'c3',title:'Талбарын тархвар зүй',level:'Дунд',published:true,owner:'system',modules:[
+      {title:'1-р модуль. Дэгдэлтийн судалгаа',lessons:['Case definition','Line list','Эпидемийн муруй']}
+    ]}
+  ];
+
+  function users(){let x=JSON.parse(localStorage.getItem(KEY)||'null'); if(!x){x=seedUsers;localStorage.setItem(KEY,JSON.stringify(x))} return x}
+  function courses(){let x=JSON.parse(localStorage.getItem(COURSES)||'null'); if(!x){x=seedCourses;localStorage.setItem(COURSES,JSON.stringify(x))} return x}
+  function setCourses(x){localStorage.setItem(COURSES,JSON.stringify(x))}
+  function current(){return JSON.parse(localStorage.getItem('vetEpiUser')||'null')}
+  function role(){return current()?.role||'guest'}
+  function roleName(r){return ({student:'Суралцагч',teacher:'Багш',admin:'Админ',guest:'Зочин'})[r]||r}
+  function showPanel(){document.getElementById('v13Landing').style.display='none';document.getElementById('v10App').style.display='none';document.getElementById('v11CertificateDemo').style.display='none';document.getElementById('roleV20Panel').classList.remove('role-v20-hidden');renderRole()}
+  function hidePanel(){document.getElementById('roleV20Panel').classList.add('role-v20-hidden');document.getElementById('v13Landing').style.display='block';}
+  window.roleV20Close=hidePanel;
+  window.openRolePanel=function(){
+    if(!current()){document.getElementById('roleV20LoginHelp').style.display='flex';return}
+    showPanel()
+  };
+
+  function renderRole(){
+    const u=current(), r=role();
+    document.getElementById('roleV20UserLine').innerHTML=`👤 ${u?.name||'Зочин'} &nbsp; <span class="role-v20-badge ${r}">${roleName(r)}</span>`;
+    const body=document.getElementById('roleV20Body');
+    if(r==='student') body.innerHTML=studentView();
+    else if(r==='teacher') body.innerHTML=teacherView();
+    else if(r==='admin') body.innerHTML=adminView();
+    else body.innerHTML='<div class="panel">Нэвтэрч орно уу.</div>';
+  }
+
+  function studentView(){
+    const cs=courses().filter(c=>c.published);
+    return `<div class="role-v20-grid">
+      <div class="panel"><h3>🎓 Суралцагчийн эрх</h3>
+        <p class="muted">Зөвхөн нийтлэгдсэн сургалтыг үзэх, хичээлээ нээх, ахицаа хадгалах, сорил өгөх боломжтой.</p>
+        <div class="role-v20-cards">${cs.map(c=>`<div class="role-v20-card"><span class="role-v20-badge">${c.level}</span><h3>${c.title}</h3><p class="muted">${c.modules.length} модуль</p><button class="role-v20-btn" onclick="roleV20OpenCourse('${c.id}')">Хичээл үзэх</button></div>`).join('')}</div>
+      </div>
+      <div class="panel"><h3>📈 Миний ахиц</h3><p>Нийт хичээл: <b>${cs.reduce((n,c)=>n+c.modules.reduce((m,x)=>m+x.lessons.length,0),0)}</b></p><p>Дууссан: <b>0</b></p><p>Сертификат: <b>Шаардлага хангаагүй</b></p></div>
+    </div>`
+  }
+
+  function teacherView(){
+    const cs=courses();
+    return `<div class="role-v20-grid">
+      <div class="panel"><h3>👨‍🏫 Багшийн эрх</h3>
+        <p class="muted">Сургалт үүсгэх, модуль/хичээл нэмэх, нийтлэх/нуух, материалын мэдээлэл оруулах.</p>
+        <form onsubmit="roleV20CreateCourse(event)">
+          <label>Сургалтын нэр<input id="rvTitle" class="role-v20-input" required></label>
+          <label>Түвшин<select id="rvLevel" class="role-v20-select"><option>Анхан</option><option>Дунд</option><option>Ахисан</option></select></label>
+          <button class="role-v20-btn">+ Сургалт үүсгэх</button>
+        </form>
+      </div>
+      <div class="panel"><h3>📚 Миний сургалтууд</h3>${cs.map(c=>`<div class="role-v20-card" style="margin-bottom:10px"><b>${c.title}</b> <span class="role-v20-badge">${c.level}</span><p class="muted">${c.modules.length} модуль • ${c.published?'Нийтэлсэн':'Ноорог'}</p><button class="role-v20-btn secondary" onclick="roleV20AddLesson('${c.id}')">+ Хичээл</button><button class="role-v20-btn secondary" onclick="roleV20TogglePublish('${c.id}')">${c.published?'Нуух':'Нийтлэх'}</button></div>`).join('')}</div>
+    </div>`
+  }
+
+  function adminView(){
+    const us=users(), cs=courses();
+    return `<div class="role-v20-grid">
+      <div class="panel"><h3>🛡️ Админ самбар</h3>
+        <p class="muted">Хэрэглэгчийн эрх, сургалтын нийтлэл, системийн demo тохиргоог удирдана.</p>
+        <table class="role-v20-table"><tr><th>Хэрэглэгч</th><th>Эрх</th><th>Үйлдэл</th></tr>${us.map((u,i)=>`<tr><td>${u.name}<br><small>${u.email}</small></td><td><select class="role-v20-select" style="margin:0" onchange="roleV20SetRole(${i},this.value)"><option value="student" ${u.role==='student'?'selected':''}>Суралцагч</option><option value="teacher" ${u.role==='teacher'?'selected':''}>Багш</option><option value="admin" ${u.role==='admin'?'selected':''}>Админ</option></select></td><td><button class="role-v20-btn danger" onclick="roleV20DeleteUser(${i})">Устгах</button></td></tr>`).join('')}</table>
+      </div>
+      <div class="panel"><h3>📦 Сургалтын удирдлага</h3><p>Нийт сургалт: <b>${cs.length}</b></p>${cs.map(c=>`<div class="role-v20-card" style="margin-bottom:10px"><b>${c.title}</b><p class="muted">${c.published?'🟢 Нийтэлсэн':'🟡 Ноорог'} • ${c.modules.length} модуль</p><button class="role-v20-btn secondary" onclick="roleV20TogglePublish('${c.id}')">${c.published?'Нуух':'Нийтлэх'}</button></div>`).join('')}</div>
+    </div>
+    <div class="role-v20-note" style="margin-top:16px">⚠️ Энэ нь GitHub Pages дээр ажиллах <b>frontend demo эрхийн систем</b>. Жинхэнэ олон хэрэглэгчийн нууц үг, өгөгдлийн сан, файл upload, эрхийн хамгаалалтыг backend + database + authentication шаардлагатайгаар хийх ёстой.</div>`
+  }
+
+  window.roleV20CreateCourse=function(e){
+    e.preventDefault();
+    const cs=courses(); const u=current();
+    cs.push({id:'c'+Date.now(),title:document.getElementById('rvTitle').value.trim(),level:document.getElementById('rvLevel').value,published:false,owner:u.email,modules:[]});
+    setCourses(cs); renderRole(); alert('Сургалт ноорог хэлбэрээр үүслээ.');
+  };
+  window.roleV20AddLesson=function(id){
+    const cs=courses(), c=cs.find(x=>x.id===id); if(!c)return;
+    if(!c.modules.length)c.modules.push({title:'1-р модуль',lessons:[]});
+    const lesson=prompt('Хичээлийн нэр оруулна уу:'); if(!lesson)return;
+    c.modules[0].lessons.push(lesson); setCourses(cs); renderRole();
+  };
+  window.roleV20TogglePublish=function(id){const cs=courses(),c=cs.find(x=>x.id===id);if(c){c.published=!c.published;setCourses(cs);renderRole()}}
+  window.roleV20SetRole=function(i,r){const us=users(); if(us[i]){us[i].role=r;localStorage.setItem(KEY,JSON.stringify(us)); if(current()?.email===us[i].email){const u=current();u.role=r;localStorage.setItem('vetEpiUser',JSON.stringify(u));} renderRole()}}
+  window.roleV20DeleteUser=function(i){const us=users();if(us[i]&&confirm(us[i].email+' хэрэглэгчийг устгах уу?')){us.splice(i,1);localStorage.setItem(KEY,JSON.stringify(us));renderRole()}}
+  window.roleV20OpenCourse=function(id){
+    const c=courses().find(x=>x.id===id); if(!c)return;
+    alert(c.title+'\\n\\n'+c.modules.map(m=>m.title+'\\n'+m.lessons.map((l,i)=>(i+1)+'. '+l).join('\\n')).join('\\n\\n'));
+  };
+
+  // Upgrade the existing login to recognize demo roles.
+  const originalDoLogin=window.doLogin;
+  window.doLogin=function(e){
+    e.preventDefault();
+    const email=(document.getElementById('loginEmail')?.value||'').trim().toLowerCase();
+    const pass=document.getElementById('loginPassword')?.value||'';
+    const u=users().find(x=>x.email.toLowerCase()===email && x.password===pass);
+    if(!u){
+      alert('И-мэйл эсвэл нууц үг буруу. "Demo эрхүүд" товчоор жишээ эрхүүдийг харна уу.');
+      return;
+    }
+    localStorage.setItem('vetEpiUser',JSON.stringify({name:u.name,email:u.email,role:u.role}));
+    if(typeof updateAuthUI==='function') updateAuthUI();
+    if(typeof closeAuth==='function') closeAuth();
+    alert('Амжилттай нэвтэрлээ: '+roleName(u.role));
+  };
+
+  // Add a role-management button near the existing auth area.
+  function injectButton(){
+    const areas=document.querySelectorAll('.v13-auth,#authActions');
+    areas.forEach(a=>{
+      if(a && !a.querySelector('.role-v20-launch')){
+        const b=document.createElement('button');
+        b.className='v13-register role-v20-launch';
+        b.textContent='🔐 Эрх';
+        b.onclick=window.openRolePanel;
+        a.appendChild(b);
+      }
+    });
+  }
+  window.addEventListener('DOMContentLoaded',function(){
+    users();courses();injectButton();
+    setTimeout(injectButton,500);
+  });
+  setInterval(injectButton,2000);
+})();
+</script>
+
 </body></html>
