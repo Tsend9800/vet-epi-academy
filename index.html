@@ -129,6 +129,7 @@ body{background:#f6f8fc!important;color:var(--ink)}
 <style>
 html{scroll-behavior:smooth}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <div class="v13-top">
@@ -846,6 +847,57 @@ window.addEventListener('DOMContentLoaded',function(){
     setTimeout(injectButton,500);
   });
   setInterval(injectButton,2000);
+})();
+</script>
+
+
+<style>
+#realRolePanel{max-width:1180px;margin:18px auto 40px;padding:0 18px;display:none}
+.rrp-panel{background:#fff;border:1px solid #e5e8ef;border-radius:18px;padding:20px;box-shadow:0 10px 28px rgba(30,41,80,.06)}
+.rrp-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.rrp-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.rrp-card{padding:16px;border-radius:15px;background:#f7f8ff;border:1px solid #e6e9f4}.rrp-input,.rrp-select,.rrp-text{width:100%;box-sizing:border-box;padding:10px;border:1px solid #dfe3ed;border-radius:10px;margin:5px 0 10px}.rrp-text{min-height:80px}
+.rrp-btn{border:0;border-radius:10px;padding:10px 13px;font-weight:850;cursor:pointer;background:#596cff;color:#fff;margin:4px 4px 0 0}.rrp-btn.secondary{background:#eef1ff;color:#4658cf}.rrp-btn.danger{background:#fff0f0;color:#c63c3c}
+.rrp-table{width:100%;border-collapse:collapse;font-size:13px}.rrp-table th,.rrp-table td{padding:10px;border-bottom:1px solid #edf0f5;text-align:left}.rrp-badge{display:inline-block;padding:5px 9px;border-radius:20px;font-size:11px;font-weight:900;background:#eef1ff;color:#485bd7}.rrp-badge.teacher{background:#e8fbf5;color:#14815d}.rrp-badge.admin{background:#fff0e5;color:#b25c12}.rrp-note{padding:12px;border-radius:11px;background:#fff7df;color:#765900;font-size:12px;line-height:1.5}
+@media(max-width:850px){.rrp-grid,.rrp-cards{grid-template-columns:1fr}}
+</style>
+<div id="realRolePanel">
+  <div class="rrp-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div><h2 style="margin:0">🔐 Жинхэнэ хэрэглэгчийн кабинет</h2><div id="rrpUserLine" class="muted"></div></div>
+      <button class="rrp-btn secondary" onclick="closeRealRolePanel()">← Сайт руу буцах</button>
+    </div>
+    <div id="rrpBody" style="margin-top:16px"></div>
+  </div>
+</div>
+<script>
+(function(){
+  const SUPABASE_URL='https://nexveasyfxpktszhfpus.supabase.co';
+  const SUPABASE_KEY='sb_publishable_uNEwygstlkvesPVjFOXFMw__LA_b7W5';
+  const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  window.vetSupabase=sb;
+  const esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  async function profile(){const {data:{user}}=await sb.auth.getUser(); if(!user)return null; const {data}=await sb.from('profiles').select('*').eq('id',user.id).single(); return data?{...data,email:user.email}:null}
+  async function sync(){const p=await profile(); if(p)localStorage.setItem('vetEpiUser',JSON.stringify({id:p.id,name:p.full_name,email:p.email,role:p.role})); else localStorage.removeItem('vetEpiUser'); if(typeof updateAuthUI==='function')updateAuthUI(); return p}
+  async function realLogin(e){e.preventDefault(); const email=document.getElementById('loginEmail').value.trim(), password=document.getElementById('loginPassword').value; const {error}=await sb.auth.signInWithPassword({email,password}); if(error){alert('Нэвтрэхэд алдаа: '+error.message);return} const p=await sync(); closeAuth(); alert('Амжилттай нэвтэрлээ. Эрх: '+({student:'Суралцагч',teacher:'Багш',admin:'Админ'}[p?.role]||'Суралцагч'));}
+  async function realRegister(e){e.preventDefault(); const name=document.getElementById('regName').value.trim(),email=document.getElementById('regEmail').value.trim(),password=document.getElementById('regPassword').value; const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name}}}); if(error){alert('Бүртгэл үүсгэхэд алдаа: '+error.message);return} if(data.session){await sync();closeAuth();alert('Бүртгэл амжилттай. Та Суралцагч эрхээр бүртгэгдлээ.')}else alert('Бүртгэл үүслээ. И-мэйл баталгаажуулалт асаалттай бол таны и-мэйлээр баталгаажуулна уу.');}
+  async function realLogout(){await sb.auth.signOut();localStorage.removeItem('vetEpiUser');if(typeof updateAuthUI==='function')updateAuthUI();}
+  window.doLogin=realLogin; window.doRegister=realRegister; window.logout=realLogout;
+  async function realOpen(){const p=await sync(); if(!p){openAuth('login');return} document.getElementById('v13Landing').style.display='none';document.getElementById('v10App').style.display='none';document.getElementById('v11CertificateDemo').style.display='none';document.getElementById('roleV20Panel').style.display='none';document.getElementById('realRolePanel').style.display='block';render(p)}
+  window.openRolePanel=realOpen;
+  window.closeRealRolePanel=function(){document.getElementById('realRolePanel').style.display='none';document.getElementById('v13Landing').style.display='block'};
+  async function render(p){document.getElementById('rrpUserLine').innerHTML='👤 '+esc(p.full_name||p.email)+' · <span class="rrp-badge '+p.role+'">'+esc({student:'Суралцагч',teacher:'Багш',admin:'Админ'}[p.role]||p.role)+'</span>'; if(p.role==='student')return renderStudent(p); if(p.role==='teacher')return renderTeacher(p); return renderAdmin(p)}
+  async function renderStudent(){const {data:cs}=await sb.from('courses').select('id,title,description,level,status').eq('status','published').order('created_at'); document.getElementById('rrpBody').innerHTML=`<div class="rrp-grid"><div class="rrp-panel"><h3>🎓 Нийтлэгдсэн сургалтууд</h3><div class="rrp-cards">${(cs||[]).map(c=>`<div class="rrp-card"><span class="rrp-badge">${esc(c.level)}</span><h3>${esc(c.title)}</h3><p class="muted">${esc(c.description)}</p><button class="rrp-btn" onclick="realOpenCourse('${c.id}')">Хичээл үзэх</button></div>`).join('')}</div></div><div class="rrp-panel"><h3>📈 Миний ахиц</h3><p>Энэ хэсэгт бодит lesson_progress өгөгдлөөр ахиц тооцно.</p></div></div>`}
+  window.realOpenCourse=async function(id){const {data:c}=await sb.from('courses').select('id,title,description,modules(id,title,sort_order,lessons(id,title,description,content,video_url,material_url,duration_minutes,sort_order,is_published))').eq('id',id).single();if(!c){alert('Сургалт олдсонгүй');return}const mods=(c.modules||[]).sort((a,b)=>a.sort_order-b.sort_order);document.getElementById('rrpBody').innerHTML=`<div class="rrp-panel"><button class="rrp-btn secondary" onclick="openRolePanel()">← Буцах</button><h2>${esc(c.title)}</h2><p class="muted">${esc(c.description)}</p>${mods.map(m=>`<h3>${esc(m.title)}</h3>${(m.lessons||[]).filter(l=>l.is_published).sort((a,b)=>a.sort_order-b.sort_order).map(l=>`<div class="rrp-card" style="margin:8px 0"><b>${esc(l.title)}</b><p class="muted">${esc(l.description)}</p>${l.video_url?`<a href="${esc(l.video_url)}" target="_blank" rel="noopener">🎥 Видео үзэх</a>`:''}${l.material_url?`<br><a href="${esc(l.material_url)}" target="_blank" rel="noopener">📄 Материал нээх</a>`:''}<br><button class="rrp-btn" onclick="realComplete('${l.id}')">✓ Дуусгасан</button></div>`).join('')}`).join('')}</div>`}
+  window.realComplete=async function(lessonId){const p=await profile();if(!p)return;const {error}=await sb.from('lesson_progress').upsert({user_id:p.id,lesson_id:lessonId,completed:true,completed_at:new Date().toISOString(),updated_at:new Date().toISOString()},{onConflict:'user_id,lesson_id'});alert(error?'Алдаа: '+error.message:'Хичээл дууссан гэж хадгаллаа.');}
+  async function renderTeacher(){const p=await profile();const {data:cs}=await sb.from('courses').select('id,title,description,level,status').eq('created_by',p.id).order('created_at');document.getElementById('rrpBody').innerHTML=`<div class="rrp-grid"><div class="rrp-panel"><h3>👨‍🏫 Сургалт үүсгэх</h3><form onsubmit="realCreateCourse(event)"><label>Нэр<input id="rcTitle" class="rrp-input" required></label><label>Тайлбар<textarea id="rcDesc" class="rrp-text"></textarea></label><label>Түвшин<select id="rcLevel" class="rrp-select"><option>Анхан</option><option>Дунд</option><option>Ахисан</option></select></label><button class="rrp-btn">+ Сургалт үүсгэх</button></form></div><div class="rrp-panel"><h3>📚 Миний сургалтууд</h3>${(cs||[]).map(c=>`<div class="rrp-card" style="margin-bottom:10px"><b>${esc(c.title)}</b><p class="muted">${esc(c.status)}</p><button class="rrp-btn secondary" onclick="realAddModule('${c.id}')">+ Модуль</button><button class="rrp-btn" onclick="realAddLesson('${c.id}')">+ Хичээл</button><button class="rrp-btn secondary" onclick="realPublish('${c.id}','${c.status}')">${c.status==='published'?'Ноорог болгох':'Нийтлэх'}</button></div>`).join('')}</div></div>`}
+  window.realCreateCourse=async function(e){e.preventDefault();const p=await profile();const {error}=await sb.from('courses').insert({title:document.getElementById('rcTitle').value,description:document.getElementById('rcDesc').value,level:document.getElementById('rcLevel').value,created_by:p.id,status:'draft'});if(error)alert('Алдаа: '+error.message);else{alert('Ноорог сургалт үүслээ.');render(p)}}
+  window.realAddModule=async function(cid){const title=prompt('Модулийн нэр:');if(!title)return;const {error}=await sb.from('modules').insert({course_id:cid,title});if(error)alert('Алдаа: '+error.message);else alert('Модуль нэмэгдлээ.')}
+  window.realAddLesson=async function(cid){const {data:m}=await sb.from('modules').select('id,title').eq('course_id',cid).order('sort_order').limit(1).single();if(!m){alert('Эхлээд модуль үүсгэнэ үү.');return}const title=prompt('Хичээлийн нэр:');if(!title)return;const {error}=await sb.from('lessons').insert({module_id:m.id,title,is_published:false});if(error)alert('Алдаа: '+error.message);else alert('Ноорог хичээл нэмэгдлээ.')}
+  window.realPublish=async function(id,status){const ns=status==='published'?'draft':'published';const {error}=await sb.from('courses').update({status:ns}).eq('id',id);if(error)alert('Алдаа: '+error.message);else render(await profile())}
+  async function renderAdmin(){const {data:us}=await sb.from('profiles').select('id,full_name,role,created_at').order('created_at',{ascending:false});const {data:cs}=await sb.from('courses').select('id,title,status,level,created_by').order('created_at',{ascending:false});document.getElementById('rrpBody').innerHTML=`<div class="rrp-grid"><div class="rrp-panel"><h3>🛡️ Хэрэглэгчийн удирдлага</h3><table class="rrp-table"><tr><th>Нэр</th><th>Эрх</th><th>Үйлдэл</th></tr>${(us||[]).map(u=>`<tr><td>${esc(u.full_name)}</td><td><select class="rrp-select" style="margin:0" onchange="realSetRole('${u.id}',this.value)"><option value="student" ${u.role==='student'?'selected':''}>Суралцагч</option><option value="teacher" ${u.role==='teacher'?'selected':''}>Багш</option><option value="admin" ${u.role==='admin'?'selected':''}>Админ</option></select></td><td></td></tr>`).join('')}</table></div><div class="rrp-panel"><h3>📦 Сургалтын удирдлага</h3>${(cs||[]).map(c=>`<div class="rrp-card" style="margin-bottom:10px"><b>${esc(c.title)}</b><p class="muted">${esc(c.level)} · ${esc(c.status)}</p></div>`).join('')}</div></div><div class="rrp-note" style="margin-top:16px">Админ эрхийг зөвхөн админ хэрэглэгч өөрчилнө. Эхний админыг Supabase SQL Editor-оор нэг удаа томилно.</div>`}
+  window.realSetRole=async function(id,role){const {error}=await sb.from('profiles').update({role}).eq('id',id);if(error)alert('Алдаа: '+error.message);else alert('Эрх шинэчлэгдлээ.')}
+  sb.auth.onAuthStateChange(async()=>{await sync()});
+  window.addEventListener('DOMContentLoaded',async()=>{await sync();});
 })();
 </script>
 
